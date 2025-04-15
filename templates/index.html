@@ -1,25 +1,67 @@
-<!doctype html>
-<html>
-<head><title>Selected Cells Viewer</title></head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-page TIFF Processor</title>
+  <style>
+    img {
+      height: 120px;
+      border: 1px solid #ccc;
+      padding: 2px;
+      margin-bottom: 5px;
+    }
+    .image-cell {
+      margin-right: 10px;
+      text-align: center;
+    }
+    .image-row {
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      border-bottom: 1px dashed #ccc;
+      padding-bottom: 10px;
+    }
+    button {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
 <body>
-  <h1>Upload a scanned form (.png, .jpg, or .tiff)</h1>
-  <form method="post" enctype="multipart/form-data">
-    <input type="file" name="file" required>
-    <input type="submit" value="Upload">
+  <h2>Upload .tiff File</h2>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".tif,.tiff">
+    <button type="submit">Upload</button>
   </form>
 
-  {% for page in result_imgs %}
-  <div style="display: flex; margin-bottom: 20px;">
-    {% for img in page %}
-      <div style="margin-right: 10px;">
-        <img src="{{ url_for('static', filename=img) }}" style="height: 120px;">
-      </div>
-    {% endfor %}
-  </div>
-{% endfor %}
+  {% if result_imgs %}
+    <h3>Preview & Select Cells to Save</h3>
+    <form method="POST">
+      {% for page in result_imgs %}
+        <div id="row-{{ loop.index0 }}">
+          <button type="button" onclick="selectAllInRow({{ loop.index0 }})">Select All</button>
+          <div class="image-row">
+            {% for img in page %}
+              <div class="image-cell">
+                <img src="{{ url_for('static', filename=img) }}" alt="Cell Image"><br>
+                <input type="checkbox" name="selected" value="{{ img }}">
+                <label>Keep</label>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+      <button type="submit">Save Selected</button>
+    </form>
+  {% endif %}
 
-
-
-  
+  <script>
+    function selectAllInRow(rowIndex) {
+      const row = document.getElementById("row-" + rowIndex);
+      const checkboxes = row.querySelectorAll("input[type='checkbox']");
+      checkboxes.forEach(function(cb) {
+        cb.checked = true;
+      });
+    }
+  </script>
 </body>
 </html>
