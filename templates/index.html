@@ -2,66 +2,144 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Multi-page TIFF Processor</title>
+  <title>TIFF Cell Extractor</title>
   <style>
-    img {
-      height: 120px;
-      border: 1px solid #ccc;
-      padding: 2px;
-      margin-bottom: 5px;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f8f9fa;
     }
-    .image-cell {
-      margin-right: 10px;
-      text-align: center;
+
+    h1, h2 {
+      color: #333;
     }
-    .image-row {
-      display: flex;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-      border-bottom: 1px dashed #ccc;
-      padding-bottom: 10px;
+
+    form {
+      margin-bottom: 30px;
     }
-    button {
+
+    input[type="file"] {
       margin-bottom: 10px;
+    }
+
+    .grid-row {
+      margin-bottom: 40px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .cell {
+      border: 1px solid #ccc;
+      padding: 5px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .cell img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .cell input[type="checkbox"] {
+      margin-top: 5px;
+    }
+
+    .btn {
+      padding: 10px 15px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .form-buttons {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+    }
+
+    .alert {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px;
+      border: 1px solid #c3e6cb;
+      border-radius: 4px;
+      margin: 20px 0;
     }
   </style>
 </head>
 <body>
-  <h2>Upload .tiff File</h2>
-  <form method="POST" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".tif,.tiff">
-    <button type="submit">Upload</button>
+  <h1>Upload TIFF Files</h1>
+
+  <!-- Upload Form -->
+  <form action="/" method="POST" enctype="multipart/form-data">
+    <input type="file" name="files" multiple accept=".tif,.tiff">
+    <br>
+    <button class="btn" type="submit">Upload</button>
   </form>
 
+  {% if message %}
+    <div class="alert">
+      {{ message }}
+    </div>
+  {% endif %}
+
   {% if result_imgs %}
-    <h3>Preview & Select Cells to Save</h3>
-    <form method="POST">
-      {% for page in result_imgs %}
-        <div id="row-{{ loop.index0 }}">
-          <button type="button" onclick="selectAllInRow({{ loop.index0 }})">Select All</button>
-          <div class="image-row">
-            {% for img in page %}
-              <div class="image-cell">
-                <img src="{{ url_for('static', filename=img) }}" alt="Cell Image"><br>
+    <h2>Select Cells</h2>
+
+    <form action="/" method="POST">
+      {% for group in result_imgs|batch(8) %}
+        <div class="grid-row">
+          <div class="controls">
+            <button type="button" class="btn select-row">Select All</button>
+            <button type="button" class="btn deselect-row">Deselect All</button>
+          </div>
+          <div class="grid">
+            {% for img in group %}
+              <div class="cell">
+                <img src="{{ url_for('static', filename=img) }}" alt="cell">
+                <br>
                 <input type="checkbox" name="selected" value="{{ img }}">
-                <label>Keep</label>
               </div>
             {% endfor %}
           </div>
         </div>
       {% endfor %}
-      <button type="submit">Save Selected</button>
-    </form>
-  {% endif %}
 
-  <script>
-    function selectAllInRow(rowIndex) {
-      const row = document.getElementById("row-" + rowIndex);
-      const checkboxes = row.querySelectorAll("input[type='checkbox']");
-      checkboxes.forEach(function(cb) {
-        cb.checked = true;
+      <div class="form-buttons">
+        <button class="btn" type="submit">Save Selected</button>
+      </div>
+    </form>
+
+    <script>
+      document.querySelectorAll('.grid-row').forEach(row => {
+        const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+        row.querySelector('.select-row').addEventListener('click', () => {
+          checkboxes.forEach(cb => cb.checked = true);
+        });
+        row.querySelector('.deselect-row').addEventListener('click', () => {
+          checkboxes.forEach(cb => cb.checked = false);
+        });
       });
-    }
-  </script>
+    </script>
+  {% endif %}
 </body>
 </html>

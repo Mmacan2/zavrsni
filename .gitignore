@@ -1,5 +1,20 @@
-uploads/
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Environment and editor files
 .env
-.png
+*.env
+.vscode/
+.idea/
+.DS_Store
+
+# User-generated content
+uploads/
+static/temp/
+static/saved/
+
+# Backup or temp
+*.bak
+*.swp
+*.tmp
