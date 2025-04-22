@@ -69,6 +69,16 @@ App will run at:
 - The app supports batch uploads of TIFFs and handles multipage splitting.
 
 ---
+## Cleanup
+# Remove uploaded TIFFs and intermediate PNGs
+Remove-Item -Recurse -Force uploads\*
+
+# Remove all temporary cropped cells
+Remove-Item -Recurse -Force static\temp\*
+
+# Remove all saved classified/unselected cells
+Remove-Item -Recurse -Force static\saved\*
+
 
 ## 👨‍💻 Author
 

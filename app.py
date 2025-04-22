@@ -81,6 +81,7 @@ def index():
         for file in uploaded_files:
             filename = os.path.splitext(file.filename)[0]
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)  # Ensure uploads/ exists
             file.save(filepath)
 
             if filepath.lower().endswith((".tif", ".tiff")):
@@ -93,6 +94,8 @@ def index():
 
     # Handle selections
     selected = request.form.getlist("selected")
+    print("[DEBUG] Selected images:", selected)
+
     if selected:
         for img_path in selected:
             parts = img_path.split("/")
@@ -117,16 +120,25 @@ def index():
                 relative = os.path.relpath(full_path, "static")
                 all_temp_imgs.append(relative)
 
-        unselected = set(all_temp_imgs) - set(selected)
+        normalized_selected = {os.path.normpath(p) for p in selected}
+        unselected = {os.path.normpath(p) for p in all_temp_imgs} - normalized_selected
+
         for img_path in unselected:
-            parts = img_path.split("/")
-            if len(parts) < 4:
+            parts = img_path.split(os.sep)
+            try:
+                _, filename, page_folder, filename_img = parts
+            except ValueError:
+                print(f"[ERROR] Unrecognized image path format: {img_path}")
                 continue
-            _, filename, page_folder, filename_img = parts
+
             ensure_page_folders(f"{filename}/{page_folder}")
-            src = os.path.join("static", img_path)
+            src = os.path.join("static", *parts)
             dst = os.path.join("static", "saved", filename, page_folder, "unselected", filename_img)
-            shutil.copyfile(src, dst)
+
+            try:
+                shutil.copyfile(src, dst)
+            except Exception as e:
+                print(f"[ERROR] Failed to save unselected {filename_img}: {e}")
 
         message = "Images saved successfully."
 
