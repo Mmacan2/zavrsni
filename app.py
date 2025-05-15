@@ -47,21 +47,29 @@ def warp_and_extract_cells(template_path, target_path, boxes_2d, filename, page_
             dst_pts = cv2.perspectiveTransform(src_pts, H)
             (x1, y1), (x2, y2) = dst_pts[:, 0]
             x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
-            cropped = aligned_img[y1:y2, x1:x2]
 
-            if cropped.size == 0:
-                continue
+            # Simple trim
+            pad = 5  # 👈 Change this number to adjust how many pixels are trimmed
+            cy1, cy2 = y1 + pad, y2 - pad
+            cx1, cx2 = x1 + pad, x2 - pad
+
+            if cy2 > cy1 and cx2 > cx1:
+                cropped = aligned_img[cy1:cy2, cx1:cx2]
+            else:
+                cropped = aligned_img[y1:y2, x1:x2]
 
             folder = f"static/temp/{filename}/page_{page_index}"
             os.makedirs(folder, exist_ok=True)
             save_path = f"{folder}/cell_{i+1}.png"
             cv2.imwrite(save_path, cropped)
             result_paths.append(f"temp/{filename}/page_{page_index}/cell_{i+1}.png")
+
         except Exception as e:
             print(f"[ERROR] Cell {i+1} on page {page_index} failed: {e}")
             continue
 
     return result_paths
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():

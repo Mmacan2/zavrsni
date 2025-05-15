@@ -113,11 +113,16 @@
             <button type="button" class="btn deselect-row">Deselect All</button>
           </div>
           <div class="grid">
+            {% set labels = ["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "pojacalo", "invertor"] %}
             {% for img in group %}
               <div class="cell">
+                <div style="font-weight: bold; margin-bottom: 5px; color: #555;">
+                  {{ labels[loop.index0 % 8] }}
+                </div>
                 <img src="{{ url_for('static', filename=img) }}" alt="cell">
                 <br>
-                <input type="checkbox" name="selected" value="{{ img }}">
+                <input type="checkbox" name="selected" value="{{ img }}" checked>
+
               </div>
             {% endfor %}
           </div>
