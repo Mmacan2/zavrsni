@@ -10,17 +10,27 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-os.makedirs("uploads", exist_ok=True)
-os.makedirs("static/temp", exist_ok=True)
-
 CELL_LABELS = ["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "pojacalo", "invertor"]
 
-def ensure_page_folders(page_folder):
-    base = os.path.join("static", "saved", page_folder)
-    labels = CELL_LABELS + ["unselected"]
-    for label in labels:
-        folder_path = os.path.join(base, label)
-        os.makedirs(folder_path, exist_ok=True)
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("static/temp", exist_ok=True)
+os.makedirs("static/final", exist_ok=True)
+os.makedirs("static/final/unselected", exist_ok=True)
+for label in CELL_LABELS:
+    os.makedirs(os.path.join("static/final", label), exist_ok=True)
+
+def get_next_upload_id(counter_file="upload_counter.txt"):
+    if not os.path.exists(counter_file):
+        with open(counter_file, "w") as f:
+            f.write("1")
+        return "upload_001"
+    with open(counter_file, "r+") as f:
+        count = int(f.read().strip())
+        next_id = count + 1
+        f.seek(0)
+        f.write(str(next_id))
+        f.truncate()
+    return f"upload_{next_id:03d}"
 
 def compute_homography(template_path, target_path):
     template_gray = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
@@ -35,7 +45,7 @@ def compute_homography(template_path, target_path):
     H, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
     return H
 
-def warp_and_extract_cells(template_path, target_path, boxes_2d, filename, page_index=0):
+def warp_and_extract_cells(template_path, target_path, boxes_2d, upload_id, page_index=0):
     aligned_img = cv2.imread(target_path)
     H = compute_homography(template_path, target_path)
     result_paths = []
@@ -48,105 +58,104 @@ def warp_and_extract_cells(template_path, target_path, boxes_2d, filename, page_
             (x1, y1), (x2, y2) = dst_pts[:, 0]
             x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
 
-            # Simple trim
-            pad = 5  # 👈 Change this number to adjust how many pixels are trimmed
+            pad = 3
             cy1, cy2 = y1 + pad, y2 - pad
             cx1, cx2 = x1 + pad, x2 - pad
-
             if cy2 > cy1 and cx2 > cx1:
                 cropped = aligned_img[cy1:cy2, cx1:cx2]
             else:
                 cropped = aligned_img[y1:y2, x1:x2]
 
-            folder = f"static/temp/{filename}/page_{page_index}"
-            os.makedirs(folder, exist_ok=True)
-            save_path = f"{folder}/cell_{i+1}.png"
+            gate_name = CELL_LABELS[i]
+            gate_folder = os.path.join("static", "temp", upload_id, f"page_{page_index}", gate_name)
+            os.makedirs(gate_folder, exist_ok=True)
+            filename = f"{gate_name}.png"
+            save_path = os.path.join(gate_folder, filename)
             cv2.imwrite(save_path, cropped)
-            result_paths.append(f"temp/{filename}/page_{page_index}/cell_{i+1}.png")
-
+            result_paths.append(os.path.relpath(save_path, "static").replace("\\", "/"))
         except Exception as e:
             print(f"[ERROR] Cell {i+1} on page {page_index} failed: {e}")
             continue
 
     return result_paths
 
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     result_imgs = []
     message = None
+    upload_id = None
 
-    # Handle uploads
     if request.method == "POST" and "files" in request.files:
-        shutil.rmtree("static/temp", ignore_errors=True)
         os.makedirs("static/temp", exist_ok=True)
-
         uploaded_files = request.files.getlist("files")
+        upload_id = get_next_upload_id()
         template_path = "clean_template/clean_form.tiff"
         boxes = extract_template_boxes(template_path)
         cell_structure = group_into_rows(boxes)
 
         for file in uploaded_files:
-            filename = os.path.splitext(file.filename)[0]
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)  # Ensure uploads/ exists
+            upload_dir = os.path.abspath(app.config["UPLOAD_FOLDER"])
+            os.makedirs(upload_dir, exist_ok=True)
+
+            filepath = os.path.join(upload_dir, file.filename)
             file.save(filepath)
 
             if filepath.lower().endswith((".tif", ".tiff")):
                 img = Image.open(filepath)
                 for i, page in enumerate(ImageSequence.Iterator(img)):
-                    temp_page_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{filename}_page_{i}.png")
+                    temp_page_path = os.path.join(upload_dir, f"{upload_id}_page_{i}.png")
                     page.save(temp_page_path)
-                    paths = warp_and_extract_cells(template_path, temp_page_path, cell_structure, filename, i)
+                    paths = warp_and_extract_cells(template_path, temp_page_path, cell_structure, upload_id, i)
                     result_imgs.extend(paths)
 
-    # Handle selections
     selected = request.form.getlist("selected")
-    print("[DEBUG] Selected images:", selected)
-
     if selected:
         for img_path in selected:
             parts = img_path.split("/")
-            if len(parts) < 4:
+            if len(parts) < 5:
                 continue
-            _, filename, page_folder, filename_img = parts
+            _, upload_id, page_folder, cell_name, filename_img = parts
             try:
-                cell_num = int(filename_img.split("_")[1].split(".")[0])
-                cell_name = CELL_LABELS[cell_num - 1]
-            except:
-                continue
-            ensure_page_folders(f"{filename}/{page_folder}")
-            src = os.path.join("static", img_path)
-            dst = os.path.join("static", "saved", filename, page_folder, cell_name, filename_img)
-            shutil.copyfile(src, dst)
+                dst_folder = os.path.join("static", "saved", upload_id, page_folder, cell_name)
+                os.makedirs(dst_folder, exist_ok=True)
+                src = os.path.join("static", img_path.replace("/", os.sep))
+                dst = os.path.join(dst_folder, filename_img)
+                shutil.copyfile(src, dst)
 
-        # Save unselected
+                final_name = f"{upload_id}_{page_folder}_{cell_name}.png"
+                final_dst = os.path.join("static", "final", cell_name, final_name)
+                shutil.copyfile(src, final_dst)
+            except Exception as e:
+                print(f"[ERROR] Failed to save selected {filename_img}: {e}")
+
+        # Only check unselected for current upload
         all_temp_imgs = []
-        for root, _, files in os.walk("static/temp"):
+        temp_upload_dir = os.path.join("static", "temp", upload_id)
+        for root, _, files in os.walk(temp_upload_dir):
             for f in files:
                 full_path = os.path.join(root, f)
-                relative = os.path.relpath(full_path, "static")
+                relative = os.path.relpath(full_path, "static").replace("\\", "/")
                 all_temp_imgs.append(relative)
 
-        normalized_selected = {os.path.normpath(p) for p in selected}
-        unselected = {os.path.normpath(p) for p in all_temp_imgs} - normalized_selected
+        selected_set = {p.replace("\\", "/") for p in selected}
+        unselected = set(all_temp_imgs) - selected_set
 
         for img_path in unselected:
-            parts = img_path.split(os.sep)
             try:
-                _, filename, page_folder, filename_img = parts
-            except ValueError:
-                print(f"[ERROR] Unrecognized image path format: {img_path}")
-                continue
-
-            ensure_page_folders(f"{filename}/{page_folder}")
-            src = os.path.join("static", *parts)
-            dst = os.path.join("static", "saved", filename, page_folder, "unselected", filename_img)
-
-            try:
+                clean_path = img_path.replace("\\", "/")
+                parts = clean_path.split("/")
+                _, upload_id, page_folder, cell_name, filename_img = parts
+                dst_folder = os.path.join("static", "saved", upload_id, page_folder, "unselected")
+                os.makedirs(dst_folder, exist_ok=True)
+                src = os.path.join("static", *parts)
+                dst = os.path.join(dst_folder, filename_img)
                 shutil.copyfile(src, dst)
+
+                final_name = f"{upload_id}_{page_folder}_{cell_name}.png"
+                final_dst = os.path.join("static", "final", "unselected", final_name)
+                shutil.copyfile(src, final_dst)
             except Exception as e:
-                print(f"[ERROR] Failed to save unselected {filename_img}: {e}")
+                print(f"[ERROR] Failed to save unselected {img_path}: {e}")
 
         message = "Images saved successfully."
 

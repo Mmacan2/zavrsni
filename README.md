@@ -82,6 +82,8 @@ Remove-Item -Recurse -Force static\temp\*
 # Remove all saved classified/unselected cells
 Remove-Item -Recurse -Force static\saved\*
 
+# Cleanup all intermediate and processed files
+Remove-Item -Recurse -Force uploads\*, static\temp\*, static\saved\*, static\final\*
 
 ## 👨‍💻 Author
 
