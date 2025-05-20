@@ -2,10 +2,8 @@
 
 ## ✅ TODO
 
-ubacit slike međukoraka
-dodati neku logiku da se ne dupliciraju uploadane slike
-ako je dokument watermark 0 onda and, or mora imati 0 da se zna odakle je došlo
-Ostavit web ui jer radi, ali napravit desktop aplikaciju, može custom tkinter.
+- Ubacit slike međukoraka
+
 ---
 
 ## 💡 Description
