@@ -31,6 +31,55 @@
       margin: 10px 0;
     }
 
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #f2f4f7;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .ref-bar-toggle {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .ref-bar {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 25px;
+      padding: 10px 20px;
+      background: #ffffff;
+      max-width: 1600px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .ref-cell {
+      text-align: center;
+    }
+
+    .ref-cell img {
+      max-width: 100%;
+      max-height: 100px;
+      object-fit: contain;
+      border-radius: 4px;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .ref-label {
+      font-size: 14px;
+      margin-top: 4px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    #refBar {
+      display: none;
+    }
+
     .grid-row {
       margin-bottom: 50px;
     }
@@ -132,6 +181,22 @@
 <body>
   <h1>Logic Gate Classifier</h1>
 
+  <div class="sticky-header">
+    <div class="ref-bar-toggle">
+      <button class="btn" onclick="toggleRefBar()">Toggle Reference Gates</button>
+    </div>
+
+    <div class="ref-bar" id="refBar">
+      {% set labels = ["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "pojacalo", "invertor"] %}
+      {% for label in labels %}
+        <div class="ref-cell">
+          <img src="{{ url_for('static', filename='ref_gates/' ~ label ~ '.jpeg') }}" alt="{{ label }}">
+          <div class="ref-label">{{ label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
   <form action="/" method="POST" enctype="multipart/form-data">
     <input type="file" name="files" multiple accept=".tif,.tiff"><br>
     <button class="btn" type="submit">Upload</button>
@@ -151,7 +216,6 @@
             <button type="button" class="btn deselect-row">Deselect All</button>
           </div>
           <div class="grid">
-            {% set labels = ["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "pojacalo", "invertor"] %}
             {% for img in group %}
               <div class="cell">
                 <div class="gate-label">{{ labels[loop.index0 % 8] }}</div>
@@ -168,18 +232,23 @@
         <button class="btn" type="submit">Save Selected</button>
       </div>
     </form>
-
-    <script>
-      document.querySelectorAll('.grid-row').forEach(row => {
-        const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-        row.querySelector('.select-row').addEventListener('click', () => {
-          checkboxes.forEach(cb => cb.checked = true);
-        });
-        row.querySelector('.deselect-row').addEventListener('click', () => {
-          checkboxes.forEach(cb => cb.checked = false);
-        });
-      });
-    </script>
   {% endif %}
+
+  <script>
+    function toggleRefBar() {
+      const refBar = document.getElementById("refBar");
+      refBar.style.display = (refBar.style.display === "none" || refBar.style.display === "") ? "grid" : "none";
+    }
+
+    document.querySelectorAll('.grid-row').forEach(row => {
+      const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+      row.querySelector('.select-row').addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = true);
+      });
+      row.querySelector('.deselect-row').addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = false);
+      });
+    });
+  </script>
 </body>
 </html>
