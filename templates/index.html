@@ -2,27 +2,135 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>TIFF Cell Extractor</title>
+  <title>Logic Gate Classifier</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }
-    h1, h2 { color: #333; }
-    form { margin-bottom: 30px; }
-    input[type="file"] { margin-bottom: 10px; }
-    .grid-row { margin-bottom: 40px; }
-    .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 15px; margin-top: 10px; }
-    .cell { border: 1px solid #ccc; padding: 5px; background: #fff; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .cell img { max-width: 100%; height: auto; }
-    .cell input[type="checkbox"] { margin-top: 5px; }
-    .btn { padding: 10px 15px; background-color: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-    .btn:hover { background-color: #0056b3; }
-    .controls { display: flex; gap: 10px; margin-bottom: 8px; }
-    .form-buttons { margin-top: 30px; display: flex; gap: 15px; }
-    .alert { background: #d4edda; color: #155724; padding: 12px; border: 1px solid #c3e6cb; border-radius: 4px; margin: 20px 0; }
-    .gate-label { font-weight: bold; margin-bottom: 5px; color: #555; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f2f4f7;
+      padding: 40px;
+      color: #333;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #222;
+    }
+
+    form {
+      max-width: 1600px;
+      margin: auto;
+      margin-bottom: 40px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    input[type="file"] {
+      margin: 10px 0;
+    }
+
+    .grid-row {
+      margin-bottom: 50px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 25px;
+      margin-top: 10px;
+    }
+
+    .cell {
+      background: white;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .cell:hover {
+      transform: scale(1.015);
+    }
+
+    .cell img {
+      max-width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: 4px;
+      transition: transform 0.25s ease-in-out;
+    }
+
+    .cell img:hover {
+      transform: scale(1.5);
+      z-index: 2;
+      position: relative;
+    }
+
+    .checkbox-wrap {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .cell input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+
+    .btn {
+      padding: 10px 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .form-buttons {
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+
+    .alert {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px;
+      border: 1px solid #c3e6cb;
+      border-radius: 4px;
+      margin: 20px auto;
+      max-width: 1000px;
+      text-align: center;
+    }
+
+    .gate-label {
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
-  <h1>Upload TIFF Files</h1>
+  <h1>Logic Gate Classifier</h1>
 
   <form action="/" method="POST" enctype="multipart/form-data">
     <input type="file" name="files" multiple accept=".tif,.tiff"><br>
@@ -48,7 +156,9 @@
               <div class="cell">
                 <div class="gate-label">{{ labels[loop.index0 % 8] }}</div>
                 <img src="{{ url_for('static', filename=img) }}" alt="cell"><br>
-                <input type="checkbox" name="selected" value="{{ img }}" checked>
+                <div class="checkbox-wrap">
+                  <input type="checkbox" name="selected" value="{{ img }}" checked>
+                </div>
               </div>
             {% endfor %}
           </div>
@@ -58,6 +168,7 @@
         <button class="btn" type="submit">Save Selected</button>
       </div>
     </form>
+
     <script>
       document.querySelectorAll('.grid-row').forEach(row => {
         const checkboxes = row.querySelectorAll('input[type="checkbox"]');

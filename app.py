@@ -93,6 +93,8 @@ def index():
         boxes = extract_template_boxes(template_path)
         cell_structure = group_into_rows(boxes)
 
+        global_page_index = 0  # NEW: keep a global index across all files
+
         for file in uploaded_files:
             upload_dir = os.path.abspath(app.config["UPLOAD_FOLDER"])
             os.makedirs(upload_dir, exist_ok=True)
@@ -102,11 +104,12 @@ def index():
 
             if filepath.lower().endswith((".tif", ".tiff")):
                 img = Image.open(filepath)
-                for i, page in enumerate(ImageSequence.Iterator(img)):
-                    temp_page_path = os.path.join(upload_dir, f"{upload_id}_page_{i}.png")
+                for page in ImageSequence.Iterator(img):
+                    temp_page_path = os.path.join(upload_dir, f"{upload_id}_page_{global_page_index}.png")
                     page.save(temp_page_path)
-                    paths = warp_and_extract_cells(template_path, temp_page_path, cell_structure, upload_id, i)
+                    paths = warp_and_extract_cells(template_path, temp_page_path, cell_structure, upload_id, global_page_index)
                     result_imgs.extend(paths)
+                    global_page_index += 1
 
     selected = request.form.getlist("selected")
     if selected:
