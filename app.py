@@ -58,7 +58,7 @@ def warp_and_extract_cells(template_path, target_path, boxes_2d, upload_id, page
             (x1, y1), (x2, y2) = dst_pts[:, 0]
             x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
 
-            pad = 3
+            pad = 12
             cy1, cy2 = y1 + pad, y2 - pad
             cx1, cx2 = x1 + pad, x2 - pad
             if cy2 > cy1 and cx2 > cx1:
