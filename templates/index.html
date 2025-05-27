@@ -209,7 +209,8 @@
   {% if result_imgs %}
     <h2>Select Cells</h2>
     <form action="/" method="POST">
-      {% for group in result_imgs|batch(8) %}
+      {% set labels = ["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "pojacalo", "invertor"] %}
+      {% for group in result_imgs %}
         <div class="grid-row">
           <div class="controls">
             <button type="button" class="btn select-row">Select All</button>
@@ -218,11 +219,18 @@
           <div class="grid">
             {% for img in group %}
               <div class="cell">
-                <div class="gate-label">{{ labels[loop.index0 % 8] }}</div>
-                <img src="{{ url_for('static', filename=img) }}" alt="cell"><br>
-                <div class="checkbox-wrap">
-                  <input type="checkbox" name="selected" value="{{ img }}" checked>
-                </div>
+                <div class="gate-label">{{ labels[loop.index0] }}</div>
+                {% if img == '__placeholder__' %}
+                  <img src="{{ url_for('static', filename='ref_gates/placeholder.jpeg') }}" alt="placeholder"><br>
+                  <div class="checkbox-wrap">
+                    <input type="checkbox" disabled>
+                  </div>
+                {% else %}
+                  <img src="{{ url_for('static', filename=img) }}" alt="cell"><br>
+                  <div class="checkbox-wrap">
+                    <input type="checkbox" name="selected" value="{{ img }}" checked>
+                  </div>
+                {% endif %}
               </div>
             {% endfor %}
           </div>

@@ -66,6 +66,9 @@ def warp_and_extract_cells(template_path, target_path, boxes_2d, upload_id, page
             else:
                 cropped = aligned_img[y1:y2, x1:x2]
 
+            if cropped is None or cropped.size == 0:
+                raise ValueError("Empty cropped image")
+
             gate_name = CELL_LABELS[i]
             gate_folder = os.path.join("static", "temp", upload_id, f"page_{page_index}", gate_name)
             os.makedirs(gate_folder, exist_ok=True)
@@ -75,13 +78,13 @@ def warp_and_extract_cells(template_path, target_path, boxes_2d, upload_id, page
             result_paths.append(os.path.relpath(save_path, "static").replace("\\", "/"))
         except Exception as e:
             print(f"[ERROR] Cell {i+1} on page {page_index} failed: {e}")
-            continue
+            result_paths.append("__placeholder__")
 
     return result_paths
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    result_imgs = []
+    grouped_imgs = []
     message = None
     upload_id = None
 
@@ -93,7 +96,7 @@ def index():
         boxes = extract_template_boxes(template_path)
         cell_structure = group_into_rows(boxes)
 
-        global_page_index = 0  # NEW: keep a global index across all files
+        global_page_index = 0
 
         for file in uploaded_files:
             upload_dir = os.path.abspath(app.config["UPLOAD_FOLDER"])
@@ -108,7 +111,7 @@ def index():
                     temp_page_path = os.path.join(upload_dir, f"{upload_id}_page_{global_page_index}.png")
                     page.save(temp_page_path)
                     paths = warp_and_extract_cells(template_path, temp_page_path, cell_structure, upload_id, global_page_index)
-                    result_imgs.extend(paths)
+                    grouped_imgs.append(paths)
                     global_page_index += 1
 
     selected = request.form.getlist("selected")
@@ -131,7 +134,6 @@ def index():
             except Exception as e:
                 print(f"[ERROR] Failed to save selected {filename_img}: {e}")
 
-        # Only check unselected for current upload
         all_temp_imgs = []
         temp_upload_dir = os.path.join("static", "temp", upload_id)
         for root, _, files in os.walk(temp_upload_dir):
@@ -162,7 +164,7 @@ def index():
 
         message = "Images saved successfully."
 
-    return render_template("index.html", result_imgs=result_imgs, message=message)
+    return render_template("index.html", result_imgs=grouped_imgs, message=message)
 
 if __name__ == "__main__":
     app.run(debug=True)

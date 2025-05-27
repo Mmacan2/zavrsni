@@ -2,7 +2,11 @@
 
 ## ✅ TODO
 
-- Ubacit slike međukoraka
+- univerzalna velilina slika
+- ispraviti kose slike
+- provrtit sve
+- finalna vezija
+- novi branch di se vide spremljene slike
 
 ---
 
