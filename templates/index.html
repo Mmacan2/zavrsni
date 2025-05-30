@@ -198,9 +198,17 @@
   </div>
 
   <form action="/" method="POST" enctype="multipart/form-data">
-    <input type="file" name="files" multiple accept=".tif,.tiff"><br>
-    <button class="btn" type="submit">Upload</button>
-  </form>
+  <input type="file" name="files" multiple accept=".tif,.tiff"><br><br>
+
+  <label style="font-weight: 500;">
+    <input type="checkbox" name="do_align" checked style="transform: scale(1.2); margin-right: 8px;">
+    Align uploaded files to template
+  </label><br><br>
+
+  <button class="btn" type="submit">Upload</button>
+</form>
+
+
 
   {% if message %}
     <div class="alert">{{ message }}</div>

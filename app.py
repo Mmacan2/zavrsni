@@ -4,6 +4,7 @@ import numpy as np
 import os
 from PIL import Image, ImageSequence
 from utils import extract_template_boxes, group_into_rows
+from align import align_scanned_pages_to_template
 import shutil
 
 app = Flask(__name__)
@@ -12,6 +13,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 CELL_LABELS = ["AND", "OR", "NAND", "NOR", "XOR", "XNOR", "pojacalo", "invertor"]
 
+# Ensure folders exist
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("static/temp", exist_ok=True)
 os.makedirs("static/final", exist_ok=True)
@@ -32,39 +34,20 @@ def get_next_upload_id(counter_file="upload_counter.txt"):
         f.truncate()
     return f"upload_{next_id:03d}"
 
-def compute_homography(template_path, target_path):
-    template_gray = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
-    target_gray = cv2.imread(target_path, cv2.IMREAD_GRAYSCALE)
-    orb = cv2.ORB_create(5000)
-    kp1, des1 = orb.detectAndCompute(template_gray, None)
-    kp2, des2 = orb.detectAndCompute(target_gray, None)
-    matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-    matches = sorted(matcher.match(des1, des2), key=lambda x: x.distance)
-    src_pts = np.float32([kp1[m.queryIdx].pt for m in matches[:100]]).reshape(-1, 1, 2)
-    dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches[:100]]).reshape(-1, 1, 2)
-    H, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-    return H
-
-def warp_and_extract_cells(template_path, target_path, boxes_2d, upload_id, page_index=0):
+def warp_and_extract_cells(target_path, boxes_2d, upload_id, page_index=0):
     aligned_img = cv2.imread(target_path)
-    H = compute_homography(template_path, target_path)
     result_paths = []
 
     for i in range(8):
         try:
             x, y, w, h = boxes_2d[13][1 + i]
-            src_pts = np.float32([[x, y], [x + w, y + h]]).reshape(-1, 1, 2)
-            dst_pts = cv2.perspectiveTransform(src_pts, H)
-            (x1, y1), (x2, y2) = dst_pts[:, 0]
-            x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
-
             pad = 12
-            cy1, cy2 = y1 + pad, y2 - pad
-            cx1, cx2 = x1 + pad, x2 - pad
+            cy1, cy2 = y + pad, y + h - pad
+            cx1, cx2 = x + pad, x + w - pad
             if cy2 > cy1 and cx2 > cx1:
                 cropped = aligned_img[cy1:cy2, cx1:cx2]
             else:
-                cropped = aligned_img[y1:y2, x1:x2]
+                cropped = aligned_img[y:y+h, x:x+w]
 
             if cropped is None or cropped.size == 0:
                 raise ValueError("Empty cropped image")
@@ -89,12 +72,15 @@ def index():
     upload_id = None
 
     if request.method == "POST" and "files" in request.files:
-        os.makedirs("static/temp", exist_ok=True)
         uploaded_files = request.files.getlist("files")
         upload_id = get_next_upload_id()
         template_path = "clean_template/clean_form.tiff"
         boxes = extract_template_boxes(template_path)
         cell_structure = group_into_rows(boxes)
+
+        # ✅ Get checkbox value from form
+        do_align = "do_align" in request.form
+        print("⚙️ Alignment enabled:", do_align)
 
         global_page_index = 0
 
@@ -106,11 +92,22 @@ def index():
             file.save(filepath)
 
             if filepath.lower().endswith((".tif", ".tiff")):
-                img = Image.open(filepath)
+                if do_align:
+                    base_name = os.path.splitext(file.filename)[0]
+                    aligned_path = os.path.join(upload_dir, f"{upload_id}_{base_name}_aligned.tiff")
+                    align_scanned_pages_to_template(
+                        template_path=template_path,
+                        scanned_stack_path=filepath,
+                        output_path=aligned_path
+                    )
+                else:
+                    aligned_path = filepath  # use original if no alignment
+
+                img = Image.open(aligned_path)
                 for page in ImageSequence.Iterator(img):
                     temp_page_path = os.path.join(upload_dir, f"{upload_id}_page_{global_page_index}.png")
-                    page.save(temp_page_path)
-                    paths = warp_and_extract_cells(template_path, temp_page_path, cell_structure, upload_id, global_page_index)
+                    page.convert("RGB").save(temp_page_path)
+                    paths = warp_and_extract_cells(temp_page_path, cell_structure, upload_id, global_page_index)
                     grouped_imgs.append(paths)
                     global_page_index += 1
 
@@ -154,7 +151,6 @@ def index():
                 os.makedirs(dst_folder, exist_ok=True)
                 src = os.path.join("static", *parts)
                 dst = os.path.join(dst_folder, filename_img)
-                shutil.copyfile(src, dst)
 
                 final_name = f"{upload_id}_{page_folder}_{cell_name}.png"
                 final_dst = os.path.join("static", "final", "unselected", final_name)
