@@ -26,7 +26,7 @@ This is a Flask-based web app that:
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/Mmacan2/zavrsni.git
+git clone [https://github.com/Mmacan2/zavrsni.git](https://github.com/Mmacan2/zavrsni.git)
 cd zavrsni
 ```
 
