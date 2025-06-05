@@ -38,8 +38,8 @@ A Flask-based web and desktop app that aligns scanned or photographed logical ci
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-user/logic-gate-classifier.git
-cd logic-gate-classifier
+git clone [https://github.com/your-user/logic-gate-classifier.git](https://github.com/Mmacan2/zavrsni.git)
+cd zavrsni-main
 ```
 
 ### 2. Create a virtual environment (optional but recommended)
